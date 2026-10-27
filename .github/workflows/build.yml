@@ -44,7 +44,8 @@ jobs:
         run: |
           cd kernel
           sed -i 's/-Werror-implicit-function-declaration/-Werror=implicit-function-declaration/g' Makefile
-          grep -n 'implicit-function' Makefile | head
+          sed -i 's/-no-integrated-as//g' Makefile
+          grep -n 'implicit-function\|integrated-as' Makefile | head
 
       - name: Fetch AOSP clang r416183b
         run: |
@@ -68,7 +69,7 @@ jobs:
           make O=out ARCH=arm64 PFGM00_defconfig 2>&1 | tee defconfig.log
           make O=out ARCH=arm64 -j"$(nproc)" \
             CC=clang CLANG_TRIPLE=aarch64-linux-gnu- \
-            AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
+            LD=aarch64-linux-gnu-ld \
             CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             KCFLAGS="-Wno-error" V=1 2>&1 | tee build.log
           echo "== boot dir =="
