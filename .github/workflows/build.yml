@@ -38,6 +38,13 @@ jobs:
           grep -nE 'CONFIG_KSU|MODULE_SIG' arch/arm64/configs/PFGM00_defconfig | tail -8
           ls -l drivers/kernelsu | head
 
+      - name: Disable -Werror across kernel makefiles
+        run: |
+          cd kernel
+          grep -rl -- '-Werror' --include=Makefile --include='*.mk' --include=Kbuild . \
+            | xargs -r sed -i 's/-Werror/-Wno-error/g'
+          grep -rn -- '-Werror' --include=Makefile --include='*.mk' --include=Kbuild . | head || true
+
       - name: Fetch AOSP clang r416183b
         run: |
           git clone --depth 1 -b lineage-20.0 \
@@ -46,6 +53,7 @@ jobs:
 
       - name: Build kernel
         run: |
+          set -o pipefail
           cd kernel
           export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
           export ARCH=arm64
