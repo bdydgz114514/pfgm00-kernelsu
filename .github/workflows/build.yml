@@ -40,13 +40,11 @@ jobs:
           grep -nE 'CONFIG_KSU|MODULE_SIG' arch/arm64/configs/PFGM00_defconfig | tail -8
           ls -l drivers/kernelsu | head
 
-      - name: Disable -Werror in kernel makefiles (keep Kbuild.include intact)
+      - name: Fix GCC-only flag for clang
         run: |
           cd kernel
-          grep -rl -- '-Werror' --include=Makefile --include='*.mk' --include=Kbuild . \
-            | grep -v 'scripts/Kbuild.include' \
-            | xargs -r sed -i 's/-Werror/-Wno-error/g'
-          grep -rn -- '-Werror' --include=Makefile --include='*.mk' --include=Kbuild . | head || true
+          sed -i 's/-Werror-implicit-function-declaration/-Werror=implicit-function-declaration/g' Makefile
+          grep -n 'implicit-function' Makefile | head
 
       - name: Fetch AOSP clang r416183b
         run: |
@@ -68,7 +66,10 @@ jobs:
           export KBUILD_BUILD_USER=ci
           export KBUILD_BUILD_HOST=github
           make O=out ARCH=arm64 PFGM00_defconfig 2>&1 | tee defconfig.log
-          make O=out ARCH=arm64 -j"$(nproc)" KCFLAGS="-Wno-error" 2>&1 | tee build.log
+          make O=out ARCH=arm64 -j"$(nproc)" \
+            CC=clang CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            KCFLAGS="-Wno-error" V=1 2>&1 | tee build.log
           echo "== boot dir =="
           ls -l out/arch/arm64/boot/ || true
 
