@@ -35,13 +35,16 @@ jobs:
           sh /tmp/ksu-setup.sh main
           echo 'CONFIG_KSU=y' >> arch/arm64/configs/PFGM00_defconfig
           sed -i 's/^CONFIG_MODULE_SIG_FORCE=y/# CONFIG_MODULE_SIG_FORCE is not set/' arch/arm64/configs/PFGM00_defconfig
+          echo '# CONFIG_CC_STACKPROTECTOR_STRONG is not set' >> arch/arm64/configs/PFGM00_defconfig
+          echo '# CONFIG_SHADOW_CALL_STACK is not set' >> arch/arm64/configs/PFGM00_defconfig
           grep -nE 'CONFIG_KSU|MODULE_SIG' arch/arm64/configs/PFGM00_defconfig | tail -8
           ls -l drivers/kernelsu | head
 
-      - name: Disable -Werror across kernel makefiles
+      - name: Disable -Werror in kernel makefiles (keep Kbuild.include intact)
         run: |
           cd kernel
           grep -rl -- '-Werror' --include=Makefile --include='*.mk' --include=Kbuild . \
+            | grep -v 'scripts/Kbuild.include' \
             | xargs -r sed -i 's/-Werror/-Wno-error/g'
           grep -rn -- '-Werror' --include=Makefile --include='*.mk' --include=Kbuild . | head || true
 
