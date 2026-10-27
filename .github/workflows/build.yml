@@ -1,0 +1,86 @@
+name: build-kernelsu
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex libssl-dev libelf-dev libncurses-dev \
+            zip unzip cpio rsync python3 perl git make gcc g++ \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          df -h
+
+      - name: Fetch PFGM00 kernel source (4.14.186)
+        run: |
+          git clone --depth 1 https://github.com/Asgore-Dreemur/kernel_oppo_mt6833.git kernel
+          cd kernel
+          git log -1 --oneline
+          head -4 Makefile
+          ls arch/arm64/configs/PFGM00_defconfig
+
+      - name: Integrate KernelSU
+        run: |
+          cd kernel
+          curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh -o /tmp/ksu-setup.sh
+          sh /tmp/ksu-setup.sh main
+          echo 'CONFIG_KSU=y' >> arch/arm64/configs/PFGM00_defconfig
+          sed -i 's/^CONFIG_MODULE_SIG_FORCE=y/# CONFIG_MODULE_SIG_FORCE is not set/' arch/arm64/configs/PFGM00_defconfig
+          grep -nE 'CONFIG_KSU|MODULE_SIG' arch/arm64/configs/PFGM00_defconfig | tail -8
+          ls -l drivers/kernelsu | head
+
+      - name: Fetch AOSP clang r416183b
+        run: |
+          git clone --depth 1 -b lineage-20.0 \
+            https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git clang
+          ./clang/bin/clang --version | head -2
+
+      - name: Build kernel
+        run: |
+          cd kernel
+          export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          export CC=clang
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export KBUILD_BUILD_USER=ci
+          export KBUILD_BUILD_HOST=github
+          make O=out ARCH=arm64 PFGM00_defconfig 2>&1 | tee defconfig.log
+          make O=out ARCH=arm64 -j"$(nproc)" 2>&1 | tee build.log
+          echo "== boot dir =="
+          ls -l out/arch/arm64/boot/ || true
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp kernel/out/arch/arm64/boot/Image        artifacts/ 2>/dev/null || true
+          cp kernel/out/arch/arm64/boot/Image.gz     artifacts/ 2>/dev/null || true
+          cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/ 2>/dev/null || true
+          cp kernel/out/arch/arm64/boot/dtb          artifacts/ 2>/dev/null || true
+          cp kernel/out/arch/arm64/boot/dtbo.img     artifacts/ 2>/dev/null || true
+          find kernel/out/arch/arm64/boot/dts -name '*.dtb' -exec cp {} artifacts/ \; 2>/dev/null || true
+          cp kernel/build.log artifacts/ 2>/dev/null || true
+          cp kernel/defconfig.log artifacts/ 2>/dev/null || true
+          ls -lh artifacts
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pfgm00-kernelsu-artifacts
+          path: artifacts/**
+          retention-days: 14
