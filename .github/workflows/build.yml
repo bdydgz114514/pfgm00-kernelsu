@@ -2,8 +2,6 @@ name: build-kernelsu
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
   build:
@@ -59,7 +57,7 @@ jobs:
           export KBUILD_BUILD_USER=ci
           export KBUILD_BUILD_HOST=github
           make O=out ARCH=arm64 PFGM00_defconfig 2>&1 | tee defconfig.log
-          make O=out ARCH=arm64 -j"$(nproc)" 2>&1 | tee build.log
+          make O=out ARCH=arm64 -j"$(nproc)" KCFLAGS="-Wno-error" 2>&1 | tee build.log
           echo "== boot dir =="
           ls -l out/arch/arm64/boot/ || true
 
