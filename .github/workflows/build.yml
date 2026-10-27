@@ -35,8 +35,8 @@ jobs:
           sh /tmp/ksu-setup.sh main
           echo 'CONFIG_KSU=y' >> arch/arm64/configs/PFGM00_defconfig
           sed -i 's/^CONFIG_MODULE_SIG_FORCE=y/# CONFIG_MODULE_SIG_FORCE is not set/' arch/arm64/configs/PFGM00_defconfig
-          echo '# CONFIG_CC_STACKPROTECTOR_STRONG is not set' >> arch/arm64/configs/PFGM00_defconfig
-          echo '# CONFIG_SHADOW_CALL_STACK is not set' >> arch/arm64/configs/PFGM00_defconfig
+          sed -i 's/^CONFIG_CC_STACKPROTECTOR_STRONG=y/CONFIG_CC_STACKPROTECTOR_NONE=y/' arch/arm64/configs/PFGM00_defconfig
+          sed -i 's/^CONFIG_SHADOW_CALL_STACK=y/# CONFIG_SHADOW_CALL_STACK is not set/' arch/arm64/configs/PFGM00_defconfig
           grep -nE 'CONFIG_KSU|MODULE_SIG' arch/arm64/configs/PFGM00_defconfig | tail -8
           ls -l drivers/kernelsu | head
 
