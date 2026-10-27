@@ -68,6 +68,7 @@ jobs:
           make O=out ARCH=arm64 PFGM00_defconfig 2>&1 | tee defconfig.log
           make O=out ARCH=arm64 -j"$(nproc)" \
             CC=clang CLANG_TRIPLE=aarch64-linux-gnu- \
+            AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
             CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             KCFLAGS="-Wno-error" V=1 2>&1 | tee build.log
           echo "== boot dir =="
