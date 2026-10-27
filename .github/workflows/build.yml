@@ -40,12 +40,12 @@ jobs:
           grep -nE 'CONFIG_KSU|MODULE_SIG' arch/arm64/configs/PFGM00_defconfig | tail -8
           ls -l drivers/kernelsu | head
 
-      - name: Fix GCC-only flag for clang
+      - name: Fix clang cross-tool prefix
         run: |
           cd kernel
           sed -i 's/-Werror-implicit-function-declaration/-Werror=implicit-function-declaration/g' Makefile
-          sed -i 's/-no-integrated-as//g' Makefile
-          grep -n 'implicit-function\|integrated-as' Makefile | head
+          sed -i 's|GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))|GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))$(CROSS_COMPILE)|' Makefile
+          grep -n 'GCC_TOOLCHAIN_DIR\|implicit-function' Makefile | head
 
       - name: Fetch AOSP clang r416183b
         run: |
